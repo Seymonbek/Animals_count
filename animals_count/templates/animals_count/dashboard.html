@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Monitoring Dashboard</title>
+    <style>
+        :root {
+            --bg: #f5f1e8;
+            --card: #fffaf0;
+            --text: #222222;
+            --muted: #6b6b6b;
+            --accent: #2f6f4f;
+            --accent-soft: #d9eadf;
+            --border: #e3dacb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top right, #efe2c6 0, transparent 28%),
+                linear-gradient(180deg, #f7f4ed 0%, var(--bg) 100%);
+            color: var(--text);
+        }
+
+        .page {
+            width: min(1100px, calc(100% - 32px));
+            margin: 32px auto;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(47, 111, 79, 0.98), rgba(88, 136, 104, 0.95));
+            color: white;
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(47, 111, 79, 0.16);
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: clamp(28px, 4vw, 42px);
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 760px;
+            line-height: 1.5;
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .pill {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(46, 47, 38, 0.06);
+        }
+
+        .card h2 {
+            margin: 0 0 14px;
+            font-size: 20px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .button {
+            display: inline-block;
+            text-decoration: none;
+            background: var(--accent);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .status {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .summary-box {
+            background: var(--accent-soft);
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .summary-box .label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .summary-box .value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 12px;
+        }
+
+        .empty {
+            padding: 18px;
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        @media (max-width: 860px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page {
+                width: min(100% - 20px, 1100px);
+                margin: 20px auto;
+            }
+
+            .hero, .card {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="hero">
+            <h1>Farm Animal Monitoring</h1>
+            <p>
+                This dashboard auto-refreshes and shows the newest detection logs plus daily animal statistics.
+                Open your video counter and keep this page visible to watch updates arrive in near real time.
+            </p>
+            <div class="meta">
+                <span class="pill">Auto refresh: every 3 seconds</span>
+                <span class="pill">Newest logs only</span>
+                <span class="pill">Retention enabled</span>
+            </div>
+        </section>
+
+        <div class="grid">
+            <section class="card">
+                <div class="toolbar">
+                    <h2>Recent Logs</h2>
+                    <a class="button" href="{{ create_url }}">Manual Create</a>
+                </div>
+                <div class="toolbar">
+                    <span id="log-count">Loading logs...</span>
+                    <span class="status" id="last-updated">Waiting for first refresh</span>
+                </div>
+                <div id="logs-wrapper"></div>
+            </section>
+
+            <section class="card">
+                <h2>Daily Stats</h2>
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <span class="label">Today's total</span>
+                        <span class="value" id="today-total">0</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="label">Cow</span>
+                        <span class="value" id="cow-total">0</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="label">Sheep</span>
+                        <span class="value" id="sheep-total">0</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="label">Goat</span>
+                        <span class="value" id="goat-total">0</span>
+                    </div>
+                </div>
+                <div id="stats-wrapper"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const refreshMs = {{ refresh_ms }};
+        const logsUrl = "{{ logs_url }}";
+        const statsUrl = "{{ stats_url }}";
+
+        function formatDateTime(value) {
+            return new Date(value).toLocaleString();
+        }
+
+        function todayDateString() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function renderLogs(logs) {
+            const wrapper = document.getElementById("logs-wrapper");
+            const countLabel = document.getElementById("log-count");
+
+            countLabel.textContent = `${logs.length} recent records loaded`;
+
+            if (!logs.length) {
+                wrapper.innerHTML = '<div class="empty">No detection logs yet.</div>';
+                return;
+            }
+
+            const rows = logs.map((log) => `
+                <tr>
+                    <td>${log.id}</td>
+                    <td>${log.animal_type}</td>
+                    <td>${log.track_id}</td>
+                    <td>${formatDateTime(log.timestamp)}</td>
+                </tr>
+            `).join("");
+
+            wrapper.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Animal</th>
+                            <th>Track ID</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function renderStats(stats) {
+            const wrapper = document.getElementById("stats-wrapper");
+            const today = todayDateString();
+            const totals = { cow: 0, sheep: 0, goat: 0 };
+            let todayTotal = 0;
+
+            stats.forEach((item) => {
+                if (item.date === today) {
+                    todayTotal += item.count;
+                    if (totals[item.animal_type] !== undefined) {
+                        totals[item.animal_type] += item.count;
+                    }
+                }
+            });
+
+            document.getElementById("today-total").textContent = todayTotal;
+            document.getElementById("cow-total").textContent = totals.cow;
+            document.getElementById("sheep-total").textContent = totals.sheep;
+            document.getElementById("goat-total").textContent = totals.goat;
+
+            if (!stats.length) {
+                wrapper.innerHTML = '<div class="empty">No statistics available yet.</div>';
+                return;
+            }
+
+            const rows = stats.map((item) => `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.animal_type}</td>
+                    <td>${item.count}</td>
+                </tr>
+            `).join("");
+
+            wrapper.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Animal</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        async function refreshDashboard() {
+            try {
+                const [logsResponse, statsResponse] = await Promise.all([
+                    fetch(logsUrl),
+                    fetch(statsUrl),
+                ]);
+
+                if (!logsResponse.ok || !statsResponse.ok) {
+                    throw new Error("Dashboard data could not be loaded.");
+                }
+
+                const logs = await logsResponse.json();
+                const stats = await statsResponse.json();
+
+                renderLogs(logs);
+                renderStats(stats);
+                document.getElementById("last-updated").textContent =
+                    `Updated at ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                document.getElementById("logs-wrapper").innerHTML =
+                    '<div class="empty">Failed to load logs from the API.</div>';
+                document.getElementById("stats-wrapper").innerHTML =
+                    '<div class="empty">Failed to load statistics from the API.</div>';
+                document.getElementById("last-updated").textContent = "Refresh failed";
+            }
+        }
+
+        refreshDashboard();
+        setInterval(refreshDashboard, refreshMs);
+    </script>
+</body>
+</html>
